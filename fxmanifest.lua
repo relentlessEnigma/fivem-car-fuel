@@ -8,3 +8,12 @@ version '1.0.0'
 lua54 'yes'
 
 client_script 'client/client.lua'
+server_scripts {
+    'server/server.lua',
+    '@oxmysql/lib/MySQL.lua'
+}
+
+shared_scripts {
+    '@oxmysql/lib/MySQL.lua',
+    '@es_extended/imports.lua'
+} 
