@@ -1,33 +1,56 @@
--- set the car fuel to 100% when the car is sold in a car dealer
--- show the fuel level in screen when riding the car
--- if the player catches a car that is not associated to a player, randomize its fuel level from 15 to 100 %
---get the fuel the car has that the player is using at the moment and start decreasing it as the player is driving it. 
--- get the consumption level per mile and adjust it in the calculation
-
-local playerPed = GetPlayerPed(-1)
+local player = GetPlayerPed(-1)
 local oc = GetEntityCoords(playerPed)
+local nc
 local distanceDriven = 0
 local pedInVeh = false
+local isRunning = false
+local hasFuelNotBeenCalculated = true
+local carFuel = 100
+local carConsumption = 7
+local wasFuelNotSavedYet = false
 
 Citizen.CreateThread(function()
     while true do
 		Citizen.Wait(0)
-		local player = GetPlayerPed(-1)
 		local vehicle = GetVehiclePedIsIn(player, false)
+        local carPlate = GetVehicleNumberPlateText(vehicle)
+
 		if IsPedInAnyVehicle(player, false) then
 			pedInVeh = true
 		else
 			pedInVeh = false
-            oc = GetEntityCoords(playerPed)
+            oc = GetEntityCoords(player)
 		end
 		if pedInVeh and GetIsVehicleEngineRunning(vehicle) == 1 then
-            local nc = GetEntityCoords(playerPed)
+            if(hasFuelNotBeenCalculated) then
+                ESX.TriggerServerCallback('CarFuel:GetInfoSV', function(fuel, consumos)
+                    carFuel = fuel
+                    carConsumption = consumos
+                    isRunning = false
+                end, carPlate)
+                
+                isRunning = true
+                while isRunning do
+                    Wait(200)
+                end
+                hasFuelNotBeenCalculated = false
+            end    
+            nc = GetEntityCoords(player)
             distanceDriven += GetDistanceBetweenCoords(nc.x, nc.y, nc.z, oc.x, oc.y, oc.z, false)
-            oc = GetEntityCoords(playerPed)
-            local actualFuel = GetVehicleFuelLevel(vehicle) --60
-            local fuelAmount = actualFuel - (distanceDriven/100) * 0.7 -- this value is now hardcoded but should then be the consumption of each car
-            SetVehicleFuelLevel(vehicle, fuelAmount)
-            showMenu(GetVehicleFuelLevel(vehicle))
+            oc = GetEntityCoords(player)
+            SetVehicleFuelLevel(vehicle, carFuel)
+
+            carFuel = carFuel - (distanceDriven/100) * (carConsumption/10)
+            
+            ESX.Game.SetVehicleProperties(vehicle, { fuelLevel = carFuel })
+            showMenu(carFuel)
+            wasFuelNotSavedYet = true
+        else
+            if(carPlate ~= nil and wasFuelNotSavedYet) then
+                TriggerServerEvent('CarFuel:SaveFuel', carFuel, carPlate)
+                wasFuelNotSavedYet = false
+            end
+            hasFuelNotBeenCalculated = true
         end
         distanceDriven = 0
     end
