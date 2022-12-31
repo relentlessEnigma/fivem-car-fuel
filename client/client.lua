@@ -23,11 +23,15 @@ Citizen.CreateThread(function()
 		end
 		if pedInVeh and GetIsVehicleEngineRunning(vehicle) == 1 then
             if(hasFuelNotBeenCalculated) then
+
+                local props = ESX.Game.GetVehicleProperties(vehicle)
+                local carModel = GetDisplayNameFromVehicleModel(props.model):lower()
+
                 ESX.TriggerServerCallback('CarFuel:GetInfoSV', function(fuel, consumos)
                     carFuel = fuel
                     carConsumption = consumos
                     isRunning = false
-                end, carPlate)
+                end, carPlate, carModel)
                 
                 isRunning = true
                 while isRunning do
